@@ -1,0 +1,22 @@
+# COPY this file to ~/.dbt/profiles.yml (that's where dbt looks for it by default),
+# then run `dbt run` from inside the dbt/ folder.
+#
+# For local development the easiest auth is "oauth": it reuses the Google login
+# you already did with the gcloud CLI. Before your first run, do this once:
+#
+#     gcloud auth application-default login
+#
+# That stores a credential dbt can pick up automatically. No key files needed.
+
+platform_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: emerald-energy-483903-f3   # your GCP project ID
+      dataset: staging                    # default dataset; models override per-folder
+      location: US                        # must match where you created the datasets
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive

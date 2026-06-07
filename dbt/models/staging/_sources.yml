@@ -1,0 +1,13 @@
+version: 2
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: work_orders
+        columns:
+          - name: work_order_id
+            tests: [not_null, unique]
+          - name: status
+            tests:
+              - accepted_values:
+                  values: ['open', 'in_progress', 'completed', 'cancelled']

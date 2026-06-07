@@ -1,0 +1,21 @@
+# Minimal dbt project config. The build guide says to run `dbt init platform_dbt`,
+# which normally generates this file for you. It's included here so the models
+# in models/ actually have a home and will run without extra setup.
+
+name: 'platform_dbt'
+version: '1.0.0'
+config-version: 2
+
+# This must match the profile name in your profiles.yml (see profiles.yml.example)
+profile: 'platform_dbt'
+
+model-paths: ["models"]
+
+models:
+  platform_dbt:
+    staging:
+      +materialized: view      # staging stays cheap as views
+      +schema: staging         # writes into the `staging` dataset
+    marts:
+      +materialized: table     # marts are physical tables for fast reads
+      +schema: marts           # writes into the `marts` dataset

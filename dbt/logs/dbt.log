@@ -1,0 +1,170 @@
+[0m05:22:35.949653 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff820e660>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ffacb6850>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff6ecfed0>]}
+
+
+============================== 05:22:35.964531 | cb9c413d-54b3-4910-b664-d2a6d0fe82ae ==============================
+[0m05:22:35.964531 [info ] [MainThread]: Running with dbt=1.11.11
+[0m05:22:35.966602 [debug] [MainThread]: running dbt with arguments {'profiles_dir': '/home/hafsajavedpak/.dbt', 'log_path': '/home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/logs', 'cache_selected_only': 'False', 'printer_width': '80', 'target_path': 'None', 'version_check': 'True', 'empty': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'quiet': 'False', 'log_cache_events': 'False', 'indirect_selection': 'eager', 'partial_parse': 'True', 'use_experimental_parser': 'False', 'invocation_command': 'dbt run', 'send_anonymous_usage_stats': 'True', 'no_print': 'None', 'debug': 'False', 'write_json': 'True', 'warn_error': 'None', 'log_format': 'default', 'static_parser': 'True', 'fail_fast': 'False', 'use_colors': 'True', 'introspect': 'True'}
+[0m05:22:38.558194 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff7b78770>]}
+[0m05:22:38.713947 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc7a77ce0>]}
+[0m05:22:38.715307 [info ] [MainThread]: Registered adapter: bigquery=1.11.1
+[0m05:22:38.884918 [debug] [MainThread]: checksum: 30a8cc8fdcbf66701b0944d4ccce3fa46dd04b61e5df68b9f16d57b2e0e3f0be, vars: {}, profile: , target: , version: 1.11.11
+[0m05:22:38.886670 [info ] [MainThread]: Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m05:22:38.887500 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'partial_parser', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc7905d50>]}
+[0m05:22:41.612138 [warn ] [MainThread]: [[33mWARNING[0m][MissingArgumentsPropertyInGenericTestDeprecation]: Deprecated
+functionality
+Found top-level arguments to test `accepted_values` defined on 'raw_work_orders'
+in package 'platform_dbt' (models/staging/_sources.yml). Arguments to generic
+tests should be nested under the `arguments` property.
+[0m05:22:41.613482 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'deprecation', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'property_': 'warn', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc7977200>]}
+[0m05:22:41.928502 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc73f35b0>]}
+[0m05:22:42.116087 [debug] [MainThread]: Wrote artifact WritableManifest to /home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/target/manifest.json
+[0m05:22:42.121626 [debug] [MainThread]: Wrote artifact SemanticManifest to /home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/target/semantic_manifest.json
+[0m05:22:42.141965 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc75cc600>]}
+[0m05:22:42.143029 [info ] [MainThread]: Found 2 models, 3 data tests, 1 source, 549 macros
+[0m05:22:42.143827 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc728ae10>]}
+[0m05:22:42.147764 [info ] [MainThread]: 
+[0m05:22:42.148648 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m05:22:42.149264 [info ] [MainThread]: 
+[0m05:22:42.150264 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m05:22:42.158915 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_emerald-energy-483903-f3'
+[0m05:22:42.160720 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m05:22:42.162562 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_emerald-energy-483903-f3'
+[0m05:22:42.164883 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m05:22:48.059554 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly list_emerald-energy-483903-f3, now create_emerald-energy-483903-f3_staging_marts)
+[0m05:22:48.062918 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly list_emerald-energy-483903-f3, now create_emerald-energy-483903-f3_staging_staging)
+[0m05:22:48.064981 [debug] [ThreadPool]: Creating schema "database: "emerald-energy-483903-f3"
+schema: "staging_marts"
+"
+[0m05:22:48.066867 [debug] [ThreadPool]: Creating schema "database: "emerald-energy-483903-f3"
+schema: "staging_staging"
+"
+[0m05:22:48.119203 [debug] [ThreadPool]: On create_emerald-energy-483903-f3_staging_marts: /* {"app": "dbt", "dbt_version": "1.11.11", "profile_name": "platform_dbt", "target_name": "dev", "connection_name": "create_emerald-energy-483903-f3_staging_marts"} */
+create schema if not exists `emerald-energy-483903-f3`.`staging_marts`
+  
+[0m05:22:48.129647 [debug] [ThreadPool]: On create_emerald-energy-483903-f3_staging_staging: /* {"app": "dbt", "dbt_version": "1.11.11", "profile_name": "platform_dbt", "target_name": "dev", "connection_name": "create_emerald-energy-483903-f3_staging_staging"} */
+create schema if not exists `emerald-energy-483903-f3`.`staging_staging`
+  
+[0m05:22:48.131114 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m05:22:48.132755 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m05:22:49.389311 [debug] [ThreadPool]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=emerald-energy-483903-f3&j=bq:US:50e6dae1-8435-4430-904d-95c76f10ae74&page=queryresults
+[0m05:22:49.789438 [debug] [ThreadPool]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=emerald-energy-483903-f3&j=bq:US:715ac527-23a5-4785-b80b-d800c01e986d&page=queryresults
+[0m05:22:50.339860 [debug] [ThreadPool]: SQL status: OK in 0.949 seconds
+[0m05:22:51.017255 [debug] [ThreadPool]: SQL status: OK in 1.226 seconds
+[0m05:22:51.027380 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly create_emerald-energy-483903-f3_staging_staging, now list_emerald-energy-483903-f3_staging_marts)
+[0m05:22:51.029572 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly create_emerald-energy-483903-f3_staging_marts, now list_emerald-energy-483903-f3_staging_staging)
+[0m05:22:51.030769 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m05:22:51.032541 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m05:22:52.466476 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc5ae5b20>]}
+[0m05:22:52.468449 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m05:22:52.479752 [debug] [Thread-1 (]: Began running node model.platform_dbt.stg_work_orders
+[0m05:22:52.481201 [info ] [Thread-1 (]: 1 of 2 START sql view model staging_staging.stg_work_orders .................... [RUN]
+[0m05:22:52.482221 [debug] [Thread-1 (]: Re-using an available connection from the pool (formerly list_emerald-energy-483903-f3_staging_marts, now model.platform_dbt.stg_work_orders)
+[0m05:22:52.483005 [debug] [Thread-1 (]: Began compiling node model.platform_dbt.stg_work_orders
+[0m05:22:52.497027 [debug] [Thread-1 (]: Writing injected SQL for node "model.platform_dbt.stg_work_orders"
+[0m05:22:52.498524 [debug] [Thread-1 (]: Began executing node model.platform_dbt.stg_work_orders
+[0m05:22:52.578389 [debug] [Thread-1 (]: Writing runtime sql for node "model.platform_dbt.stg_work_orders"
+[0m05:22:52.581063 [debug] [Thread-1 (]: On model.platform_dbt.stg_work_orders: /* {"app": "dbt", "dbt_version": "1.11.11", "profile_name": "platform_dbt", "target_name": "dev", "node_id": "model.platform_dbt.stg_work_orders"} */
+
+
+  create or replace view `emerald-energy-483903-f3`.`staging_staging`.`stg_work_orders`
+  OPTIONS()
+  as with source as (
+    select * from `emerald-energy-483903-f3`.`raw`.`work_orders`
+),
+deduped as (
+    select *,
+        row_number() over (
+            partition by work_order_id order by updated_at desc
+        ) as rn
+    from source
+)
+select
+    work_order_id,
+    shop_id,
+    customer_id,
+    initcap(vehicle_make) as vehicle_make,
+    vehicle_model,
+    vehicle_year,
+    service_type,
+    lower(status) as status,
+    labor_hours,
+    parts_cost,
+    labor_cost,
+    total_cost,
+    technician_id,
+    created_at,
+    updated_at
+from deduped
+where rn = 1
+  and total_cost >= 0;
+
+
+[0m05:22:52.582616 [debug] [Thread-1 (]: Opening a new connection, currently in state closed
+[0m05:22:53.924884 [debug] [Thread-1 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=emerald-energy-483903-f3&j=bq:US:ebbf18a1-ac14-4e6e-8ec0-6dc78005d732&page=queryresults
+[0m05:22:54.915555 [debug] [Thread-1 (]: SQL status: OK in 0.989 seconds
+[0m05:22:54.960725 [debug] [Thread-1 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff7ce5db0>]}
+[0m05:22:54.962245 [info ] [Thread-1 (]: 1 of 2 OK created sql view model staging_staging.stg_work_orders ............... [[32mCREATE VIEW (0 processed)[0m in 2.47s]
+[0m05:22:54.963520 [debug] [Thread-1 (]: Finished running node model.platform_dbt.stg_work_orders
+[0m05:22:54.966182 [debug] [Thread-2 (]: Began running node model.platform_dbt.revenue_by_shop_daily
+[0m05:22:54.968394 [info ] [Thread-2 (]: 2 of 2 START sql table model staging_marts.revenue_by_shop_daily ............... [RUN]
+[0m05:22:54.970265 [debug] [Thread-2 (]: Re-using an available connection from the pool (formerly list_emerald-energy-483903-f3_staging_staging, now model.platform_dbt.revenue_by_shop_daily)
+[0m05:22:54.971990 [debug] [Thread-2 (]: Began compiling node model.platform_dbt.revenue_by_shop_daily
+[0m05:22:54.981715 [debug] [Thread-2 (]: Writing injected SQL for node "model.platform_dbt.revenue_by_shop_daily"
+[0m05:22:54.984005 [debug] [Thread-2 (]: Began executing node model.platform_dbt.revenue_by_shop_daily
+[0m05:22:55.055409 [debug] [Thread-2 (]: Writing runtime sql for node "model.platform_dbt.revenue_by_shop_daily"
+[0m05:22:55.056976 [debug] [Thread-2 (]: On model.platform_dbt.revenue_by_shop_daily: /* {"app": "dbt", "dbt_version": "1.11.11", "profile_name": "platform_dbt", "target_name": "dev", "node_id": "model.platform_dbt.revenue_by_shop_daily"} */
+
+  
+    
+
+    create or replace table `emerald-energy-483903-f3`.`staging_marts`.`revenue_by_shop_daily`
+      
+    
+    
+
+    
+    OPTIONS()
+    as (
+      select
+    shop_id,
+    date(created_at) as order_date,
+    count(*) as work_orders,
+    sum(total_cost) as revenue,
+    avg(labor_hours) as avg_labor_hours
+from `emerald-energy-483903-f3`.`staging_staging`.`stg_work_orders`
+where status = 'completed'
+group by 1, 2
+    );
+  
+[0m05:22:55.057986 [debug] [Thread-2 (]: Opening a new connection, currently in state closed
+[0m05:22:56.973122 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=emerald-energy-483903-f3&j=bq:US:87fec4df-55ca-46f5-9393-98ef16aa7308&page=queryresults
+[0m05:22:58.918131 [debug] [Thread-2 (]: SQL status: OK in 1.943 seconds
+[0m05:22:59.433490 [debug] [Thread-2 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'cb9c413d-54b3-4910-b664-d2a6d0fe82ae', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797fc47c93d0>]}
+[0m05:22:59.436233 [info ] [Thread-2 (]: 2 of 2 OK created sql table model staging_marts.revenue_by_shop_daily .......... [[32mCREATE TABLE (0.0 rows, 0 processed)[0m in 4.46s]
+[0m05:22:59.438943 [debug] [Thread-2 (]: Finished running node model.platform_dbt.revenue_by_shop_daily
+[0m05:22:59.443230 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m05:22:59.444602 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m05:22:59.445275 [debug] [MainThread]: Connection 'model.platform_dbt.stg_work_orders' was properly closed.
+[0m05:22:59.445879 [debug] [MainThread]: Connection 'model.platform_dbt.revenue_by_shop_daily' was properly closed.
+[0m05:22:59.446547 [info ] [MainThread]: 
+[0m05:22:59.447230 [info ] [MainThread]: Finished running 1 table model, 1 view model in 0 hours 0 minutes and 17.30 seconds (17.30s).
+[0m05:22:59.448836 [debug] [MainThread]: Command end result
+[0m05:22:59.500115 [debug] [MainThread]: Wrote artifact WritableManifest to /home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/target/manifest.json
+[0m05:22:59.504979 [debug] [MainThread]: Wrote artifact SemanticManifest to /home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/target/semantic_manifest.json
+[0m05:22:59.516235 [debug] [MainThread]: Wrote artifact RunExecutionResult to /home/hafsajavedpak/Projects/gcp-cloud-monitoring/dbt/target/run_results.json
+[0m05:22:59.517027 [info ] [MainThread]: 
+[0m05:22:59.517813 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m05:22:59.518417 [info ] [MainThread]: 
+[0m05:22:59.519023 [info ] [MainThread]: Done. PASS=2 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=2
+[0m05:22:59.519971 [warn ] [MainThread]: [[33mWARNING[0m][DeprecationsSummary]: Deprecated functionality
+Summary of encountered deprecations:
+- MissingArgumentsPropertyInGenericTestDeprecation: 1 occurrence
+To see all deprecation instances instead of just the first occurrence of each,
+run command again with the `--show-all-deprecations` flag. You may also need to
+run with `--no-partial-parse` as some deprecations are only encountered during
+parsing.
+[0m05:22:59.521191 [debug] [MainThread]: Resource report: {"command_name": "run", "command_success": true, "command_wall_clock_time": 23.701977, "process_in_blocks": "215504", "process_kernel_time": 0.796003, "process_mem_max_rss": "237004", "process_out_blocks": "3656", "process_user_time": 10.96305}
+[0m05:22:59.522094 [debug] [MainThread]: Command `dbt run` succeeded at 05:22:59.521914 after 23.70 seconds
+[0m05:22:59.522870 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff6efb850>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ffb349f60>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x797ff7d09550>]}
+[0m05:22:59.523704 [debug] [MainThread]: Flushing usage events
+[0m05:23:00.853081 [debug] [MainThread]: An error was encountered while trying to flush usage events

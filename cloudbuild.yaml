@@ -1,0 +1,22 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['run', 'deploy', 'generator',
+           '--source', './generator', '--region', '${_REGION}',
+           '--service-account', '${_RUNTIME_SA}',
+           '--set-env-vars', 'PROJECT_ID=$PROJECT_ID',
+           '--no-allow-unauthenticated']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['run', 'deploy', 'ingestor',
+           '--source', './ingestor', '--region', '${_REGION}',
+           '--service-account', '${_RUNTIME_SA}',
+           '--set-env-vars', 'PROJECT_ID=$PROJECT_ID',
+           '--no-allow-unauthenticated']
+substitutions:
+  _REGION: 'us-central1'
+  # NOTE: the original guide left "PROJECT_ID" as literal text here, which would
+  # never get substituted and the deploy would fail. Your real project ID is hard-coded.
+  _RUNTIME_SA: 'platform-runtime@emerald-energy-483903-f3.iam.gserviceaccount.com'
+options:
+  logging: CLOUD_LOGGING_ONLY
