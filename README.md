@@ -607,7 +607,43 @@ serverless lifecycles actually work. It's the strongest thing in your toolkit �
 lead with it.
  
 ---
- 
+
+## How it can be extended : Self hosted metabse -> Airflow Running on GCP Compute Engine
+
+### The shape of it
+
+```
+Compute Engine VM (e2-small, us-central1)
+  │
+  ├── Docker + docker-compose (same pattern as your Metabase self-host)
+  │     └── Airflow webserver + scheduler + Postgres (Airflow's own metadata DB)
+  │
+  ├── dbt project copied onto the VM
+  │
+  └── DAG (your existing dags/platform_pipeline.py) scheduled hourly
+        dbt_run >> dbt_test
+```
+
+The VM runs Airflow in Docker, the same self-hosting pattern you already used for Metabase — so this isn't a new concept, it's the same one applied again. That consistency is also a good interview line: *"I used the same self-hosting pattern for Airflow that I used for Metabase."*
+
+### Step by step
+
+**1. Create the VM.** `e2-small` (2 GB RAM) — Airflow's scheduler + webserver + a small Postgres is tight on an `e2-micro` (1 GB) but comfortable on `e2-small`. I'll use `gcloud compute instances create` with a Debian/Ubuntu image, and attach the `platform-runtime` service account to it (via `--scopes` or `--service-account`) so Airflow can authenticate to BigQuery the same way your Cloud Run services do — no separate key file needed, same identity, same least-privilege pattern.
+
+**2. Firewall rule.** Open port 8080 (Airflow's webserver) to *your IP only*, not `0.0.0.0/0` — a wide-open Airflow UI with no auth in front is a genuinely common way people get their GCP project cryptomined. I'll use `--source-ranges` scoped to your current IP.
+
+**3. Bootstrap script (via `--metadata=startup-script`).** On first boot, the VM installs Docker, pulls down your dbt project and DAG (via `gcloud compute scp` or a small git clone), and writes a `docker-compose.yml` for Airflow — using the official `apache/airflow` image with `LocalExecutor` and a Postgres container for its metadata, mirroring your Metabase compose file almost exactly.
+
+**4. Wire the DAG to real dbt.** Your existing `dags/platform_pipeline.py` runs `cd /opt/dbt && dbt run`. I'll adjust the path to match where dbt actually lands on the VM, and make sure the VM has `dbt-bigquery` installed and pointed at the same `profiles.yml` pattern you already have (oauth via the attached service account instead of `gcloud auth application-default login`, since there's no human logging into a VM).
+
+**5. Schedule.** The DAG's `schedule="0 * * * *"` (hourly) is already sensible given your data lands continuously — no change needed there.
+
+**6. Start Airflow, confirm the DAG appears, trigger it once manually, verify `staging`/`marts` tables actually update in BigQuery** — proving automation the same way we proved Project 1's pipeline: row counts before and after, not just "the command didn't error."
+
+**7. Cost control.** Since this is a portfolio demo, not a 24/7 production system, I'll give you the `gcloud compute instances stop` / `start` commands so you can shut it down between demos and only pay for the ~10 GB disk, not compute time.
+
+---
+
 ## Glossary
  
 - **API (enabling one):** turning on a GCP service for your project before you
