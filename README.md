@@ -280,3 +280,359 @@ BigQuery to confirm the whole chain worked end-to-end. *This is where the errors
 showed up.*
  
 ---
+## Errors and Their Solutions
+ 
+Two things went wrong. The first was trivial; the second was the kind of subtle,
+real-world bug that's worth gold in an interview because it tests whether you
+understand how the cloud *actually behaves*.
+ 
+### Error 1 — `Unexpected keyword ROWS`
+ 
+**What you ran:**
+```sql
+SELECT COUNT(*) AS rows, MAX(ingested_at) AS latest FROM `...work_orders`
+```
+**The error:** `Syntax error: Unexpected keyword ROWS`.
+ 
+**Why it happened:** `ROWS` is a **reserved keyword** in BigQuery's SQL dialect
+(it's part of window-function syntax, e.g. `ROWS BETWEEN ...`). You can't use a
+reserved word as a plain column alias — the parser sees `ROWS` and expects
+window syntax, gets confused, and bails.
+ 
+**The fix:** rename the alias to something that isn't reserved.
+```sql
+SELECT COUNT(*) AS row_count, MAX(ingested_at) AS latest FROM `...work_orders`
+```
+*(Alternatively you can wrap a reserved word in backticks, but the clean habit is
+to just not name columns after keywords.)*
+ 
+**Lesson:** every SQL engine has a list of reserved words, and they differ
+slightly between engines. When a column name throws an inexplicable syntax
+error, "is this a reserved word?" should be an early guess.
+ 
+### Error 2 — The empty table mystery (the important one)
+ 
+**The symptom:** after building everything, `raw.work_orders` had **zero rows**,
+even though the generator was running and returning HTTP `200 OK` every 10
+minutes. Project 2's dashboard sat on top of an empty table.
+ 
+This is the worst kind of bug: **nothing reported an error.** Every component
+said it was fine. So we had to *isolate* which link in the chain was actually
+broken. Here's the exact detective process — memorize this shape, it's a
+transferable skill.
+ 
+#### Step-by-step isolation
+ 
+The pipeline is: **Scheduler → Generator → Pub/Sub → Ingestor → BigQuery.** A
+break could be at any arrow. The strategy: **test each link independently,
+starting from the symptom and walking backward**, so each test rules out half
+the remaining suspects.
+ 
+1. **Confirm the symptom.** `SELECT COUNT(*)` on `raw.work_orders` → 0. And a
+   `GROUP BY status` returned *no rows at all* — the tell that the table was
+   truly empty, not just missing completed orders.
+2. **Does the consumer side even exist?** Listed Cloud Run services and Pub/Sub
+   subscriptions. Both `ingestor` and `work-orders-push` existed. → The
+   *infrastructure* was built. (First hypothesis — "I skipped a step" — rejected.)
+3. **Is delivery/auth failing?** Read the **ingestor's logs**. They showed only
+   `Booting worker` and, later, `Handling signal: term` — **no request lines at
+   all.** So the ingestor had never been called. Checked the subscription's OIDC
+   config and the `run.invoker` IAM binding — both correct. Auth *config* looked
+   fine, but the ingestor still wasn't being hit.
+4. **The decisive test — bypass everything upstream.** We published a known-good
+   message **directly to the topic** with `gcloud pubsub topics publish`, then
+   watched the ingestor logs. Result: `POST 204`, and the test row **appeared in
+   BigQuery.**
+   This single test was the turning point. It proved the **entire back half**
+   (Topic → Push → Ingestor → BigQuery) works perfectly. Whatever was broken had
+   to be **before** the topic — i.e., the generator wasn't actually getting
+   messages *into* the topic, even though it returned 200.
+5. **Inspect the generator's own logs.** We saw the smoking gun:
+```
+   00:19:10  published 20 events
+   00:19:10  Handling signal: term      <-- shutdown, same second
+```
+   The app logged "published 20 events," then the container was told to shut
+   down **one second later.**
+ 
+#### The root cause
+ 
+This is where the "Cloud Run is ephemeral" warning from Part 2 pays off.
+ 
+The Pub/Sub Python client's `publish()` call is **asynchronous**. It does *not*
+send the message immediately. It hands the message to a **background thread**
+that batches and sends messages, and returns a **future** (a placeholder for "the
+result that will exist once it's actually sent"). The function returns instantly,
+*before the network send happens.*
+ 
+Our generator did this:
+```python
+for _ in range(n):
+    publisher.publish(TOPIC, data)   # queues into background thread, returns immediately
+print("published N events")          # logs (misleadingly!) before sends complete
+return "ok", 200                     # HTTP response sent
+```
+ 
+Now stack that against how Cloud Run behaves:
+ 
+1. Generator queues 20 messages into the background thread.
+2. Generator returns `200`.
+3. Cloud Run sees the HTTP request is finished and, since nothing else is
+   happening, **scales the instance to zero — it kills the container.**
+4. The background thread that was about to send those 20 messages **dies with
+   the container.** The messages never leave the box.
+That's why the generator reported success and published *nothing*. And it's why
+the **direct CLI publish worked** — `gcloud pubsub topics publish` is
+**synchronous**; it waits for the send to complete before returning.
+ 
+**Analogy:** you hand 20 letters to an assistant to mail, shout "letters sent!",
+lock the office, and go home — all in the same second. The assistant never made
+it to the post office. The letters were in their hands when the lights went out.
+ 
+#### The fix
+ 
+Force the request to **wait until every message is truly sent** before returning.
+The `publish()` future has a `.result()` method that **blocks** until the send
+completes (or raises if it failed):
+ 
+```python
+@app.route("/", methods=["POST", "GET"])
+def generate():
+    n = random.randint(5, 20)
+    futures = []
+    for _ in range(n):
+        future = publisher.publish(TOPIC, json.dumps(make_event()).encode("utf-8"))
+        futures.append(future)
+    for future in futures:
+        future.result()        # <-- block until each message is actually sent
+    print(json.dumps({"severity": "INFO", "message": f"published {n} events"}))
+    return f"published {n} events", 200
+```
+ 
+Now the HTTP response isn't returned until the messages are confirmed sent, so
+Cloud Run can't scale to zero out from under them. Redeploy, trigger, and rows
+finally flow into `raw.work_orders`.
+ 
+**Lessons (all interview-worthy):**
+- "Returns 200" ≠ "did the work." Always verify the *side effect*, not the
+  status code.
+- Serverless containers can be killed the instant your handler returns. Finish
+  all background work *before* responding.
+- Async APIs hand you a future; if you don't wait on it, you've only *scheduled*
+  the work, not done it.
+- To debug a silent multi-stage pipeline, **test each stage in isolation** and
+  use a direct injection (the manual publish) to cleave the system in half.
+---
+ 
+## Common Questions
+ 
+Each topic: a short refresher, then questions phrased the way interviewers ask,
+with answers you can adapt. Practice saying them aloud.
+ 
+###  1. Architecture & event-driven design
+ 
+**Q: Walk me through this project.**
+> "It's a streaming ingestion pipeline on GCP. A Cloud Scheduler job triggers a
+> Cloud Run service that generates work-order events and publishes them to a
+> Pub/Sub topic. A push subscription delivers each message to a second Cloud Run
+> service that validates it and writes it into BigQuery. Downstream, dbt models
+> the raw data into staging and marts layers. The whole thing is decoupled
+> through Pub/Sub, so producers and consumers scale and fail independently, and
+> it's built private-by-default with a least-privilege service account."
+ 
+**Q: Why put a queue in the middle? Why not have the generator write to BigQuery directly?**
+> "Decoupling and resilience. With a queue, the producer doesn't need the
+> consumer to be up — messages buffer until the consumer can handle them. It
+> absorbs traffic spikes, lets me add more consumers later without touching the
+> producer, and gives me retries and dead-lettering for free. Direct writes
+> couple the two services: if BigQuery or the ingestor is slow, the producer
+> stalls or drops data."
+ 
+**Q: What does "loose coupling" buy you here?**
+> "Each stage only depends on the contract of the stage next to it, not its
+> implementation. I can redeploy the ingestor, swap BigQuery for another sink,
+> or add a second subscriber, and nothing upstream changes."
+ 
+###  2. Pub/Sub & messaging
+ 
+**Q: Difference between a topic and a subscription?**
+> "A topic is where publishers send messages. A subscription is a reader attached
+> to a topic that delivers those messages to a consumer. One topic can feed many
+> subscriptions, each getting its own copy of the stream."
+ 
+**Q: Push vs pull subscriptions — which did you use and why?**
+> "Push. Pub/Sub sends an HTTP POST to my consumer's URL when a message arrives.
+> It fits Cloud Run, which is HTTP-based and scales to zero — push effectively
+> wakes the service up. Pull is better when the consumer wants to control its own
+> rate or runs as a long-lived worker."
+ 
+**Q: What delivery guarantee does Pub/Sub give? What's the implication?**
+> "At-least-once delivery — every message arrives at least once, but you can get
+> duplicates. So consumers must be idempotent: processing the same message twice
+> shouldn't create two rows or double-count anything."
+ 
+**Q: How would you make the consumer idempotent?**
+> "Use a stable unique key from the message — here, `work_order_id` — and
+> de-duplicate on it: either an upsert/MERGE keyed on that ID, or dedup in the
+> staging model with `ROW_NUMBER() OVER (PARTITION BY work_order_id ORDER BY
+> updated_at DESC)` keeping the latest. My staging view actually does the latter."
+ 
+**Q: What's a dead-letter topic and when does a message land there?**
+> "It's a quarantine for messages that fail repeatedly. I set max delivery
+> attempts to 5; after that, instead of retrying forever, Pub/Sub routes the
+> message to the dead-letter topic so one poison message can't block the pipe. I
+> can inspect and replay those separately."
+ 
+**Q: What's the ack deadline?**
+> "The time the consumer has to acknowledge a message before Pub/Sub assumes
+> failure and redelivers. I set 30 seconds. Too short and you get spurious
+> redeliveries; too long and genuine failures take longer to retry."
+ 
+###  3. Cloud Run & serverless
+ 
+**Q: What is Cloud Run and what does "scale to zero" mean?**
+> "It runs containers on demand behind an HTTP endpoint. When no requests are
+> coming in, it runs zero instances and costs nothing; under load it scales out
+> automatically. You don't manage servers."
+ 
+**Q: What does it mean that Cloud Run is stateless/ephemeral, and why does it matter?**
+> "An instance can be created or destroyed at any time, and nothing in memory or
+> on local disk survives. It matters because you can't rely on background work
+> continuing after you send your HTTP response — the instance may be torn down
+> the moment the request completes. I hit exactly this: my generator queued
+> async Pub/Sub publishes and returned 200, Cloud Run scaled it to zero, and the
+> background send thread died before the messages left. I fixed it by waiting on
+> the publish futures before returning." *(This is your best story — see  7. .)*
+ 
+**Q: What's a cold start?**
+> "The extra latency when Cloud Run has to spin up a fresh instance because none
+> were warm. First request after idle is slower. You can mitigate with minimum
+> instances if latency matters."
+ 
+**Q: Why deploy `--no-allow-unauthenticated`?**
+> "It makes the service private — only callers with a valid token and the
+> `run.invoker` role can reach it. The scheduler and Pub/Sub authenticate with
+> OIDC tokens tied to my service account. Public-by-default would let anyone on
+> the internet hit my endpoint."
+ 
+###  4. Identity, IAM & security
+ 
+**Q: What's a service account?**
+> "A non-human identity for code. Instead of a username/password, my services run
+> *as* a service account and inherit its IAM permissions."
+ 
+**Q: Explain least privilege in this project.**
+> "The runtime account only got what it needed: write to BigQuery, run BigQuery
+> jobs, write logs, and invoke the two specific services — nothing more. No
+> admin, no project owner. If the credential leaked, an attacker could write some
+> rows and read nothing sensitive."
+ 
+**Q: How does the scheduler authenticate to a private Cloud Run service?**
+> "With an OIDC token. The scheduler is configured with my service account; it
+> mints a short-lived signed token scoped to the target URL, and Cloud Run
+> verifies it and checks the identity has `run.invoker`."
+ 
+**Q (deeper): For BigQuery in Project 2's Metabase, how would you avoid a key file?**
+> "Workload identity / Application Default Credentials when running on GCP, so no
+> long-lived key exists. And scope the reader to just the reporting dataset, or
+> use BigQuery authorized views, instead of a project-wide read role."
+ 
+###  5. BigQuery & data modeling
+ 
+**Q: Why three datasets — raw, staging, marts?**
+> "Layering. Raw is the untouched source of truth, staging is cleaned and
+> deduplicated, marts are business-ready aggregates. Keeping raw immutable means
+> I can always rebuild downstream layers when I find a logic bug — I never lose
+> the original data."
+ 
+**Q: Why is BigQuery a good fit and when is it a bad fit?**
+> "Great for analytical queries over large datasets — serverless, columnar, scales
+> automatically. Bad fit for high-frequency single-row transactional updates or
+> low-latency app lookups; that's what an OLTP database like Postgres is for."
+ 
+**Q: REQUIRED vs NULLABLE columns?**
+> "REQUIRED columns must be present or BigQuery rejects the row — I used that on
+> `work_order_id` and `shop_id` as a basic data-quality gate at the door.
+> NULLABLE allows missing values."
+ 
+###  6. Observability & debugging
+ 
+**Q: How do you debug a pipeline that silently produces no data?**
+> "Isolate each stage. I start at the symptom and walk backward, testing one link
+> at a time so each test eliminates half the suspects. The key move is injecting
+> a known-good input partway through — I published a message directly to the
+> topic, which proved the entire consumer half worked and pointed the blame
+> upstream to the producer."
+ 
+**Q: A service returns 200 but the work didn't happen. What now?**
+> "Treat the status code as untrustworthy and verify the actual side effect — in
+> my case, row counts in BigQuery. A 200 only means the handler returned; it says
+> nothing about async work that may not have completed. Then check logs for the
+> gap between 'I did X' and the next lifecycle event."
+ 
+**Q: What would you add to make this production-grade observability?**
+> "Structured logs (I already log JSON with severity), metrics on Pub/Sub
+> backlog / undelivered messages, an uptime check and alert on the ingestor,
+> a dashboard for ingestion rate and error rate, and an alert when the
+> dead-letter topic gets traffic. Plus tracing to follow a single message
+> end-to-end."
+ 
+###  7. Your signature debugging story (rehearse this in STAR form)
+ 
+> **Situation:** "After deploying the pipeline, BigQuery stayed empty even though
+> the generator returned HTTP 200 on every scheduled run — no errors anywhere."
+>
+> **Task:** "Find why messages weren't landing, in a system where every component
+> claimed to be healthy."
+>
+> **Action:** "I isolated the pipeline stage by stage. Cloud Run and the
+> subscription existed; the ingestor logs showed it had never been called. I
+> published a message directly to the topic — it landed in BigQuery, proving the
+> consumer half was fine and the generator was the culprit. The generator logs
+> showed 'published 20 events' followed one second later by a shutdown signal.
+> The root cause was that the Pub/Sub client's `publish()` is asynchronous: it
+> queues to a background thread and returns immediately. The handler returned
+> 200, Cloud Run scaled the instance to zero, and the background send thread was
+> killed before the messages were transmitted."
+>
+> **Result:** "I made the publishes synchronous by collecting the futures and
+> calling `.result()` on each before returning the response. After redeploying,
+> data flowed correctly. The takeaway I carry forward: on serverless, finish all
+> background work before responding, and never trust a status code over the
+> actual side effect."
+ 
+This one story demonstrates: distributed-systems intuition, a disciplined
+debugging method, understanding of async vs sync, and knowledge of how
+serverless lifecycles actually work. It's the strongest thing in your toolkit —
+lead with it.
+ 
+---
+ 
+## Glossary
+ 
+- **API (enabling one):** turning on a GCP service for your project before you
+  can use it.
+- **Ack / acknowledgement:** a consumer telling the queue "I handled this
+  message, don't resend."
+- **At-least-once delivery:** guarantee that messages arrive ≥1 time (possible
+  duplicates).
+- **Container:** your app packaged with its dependencies so it runs the same
+  anywhere.
+- **Cron:** time-based schedule syntax (`*/10 * * * *`).
+- **Dead-letter topic:** where messages go after failing delivery too many times.
+- **Future:** a placeholder object representing a result that will be ready later
+  (from an async call).
+- **Idempotent:** an operation that's safe to repeat — doing it twice equals
+  doing it once.
+- **IAM:** the permission system deciding who can do what.
+- **Loose coupling:** components depend on contracts, not each other's internals.
+- **OIDC token:** a short-lived signed ID card a service uses to prove who it is.
+- **Push subscription:** Pub/Sub delivers messages by calling your HTTP endpoint.
+- **Scale to zero:** running no instances (and paying nothing) when there's no
+  traffic.
+- **Service account:** an identity for code, not a person.
+- **Stateless / ephemeral:** keeps nothing between requests; can be destroyed any
+  time.
+- **Topic / subscription:** the mailbox you publish to / the reader that delivers
+  from it.
+
